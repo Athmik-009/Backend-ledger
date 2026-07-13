@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body class="page-dashboard" data-page="system-dashboard">
+    <main class="dashboard-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">System control</p>
+          <h1>Fund new users</h1>
+        </div>
+        <button class="btn btn-secondary" id="logoutBtn" type="button">Log out</button>
+      </header>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Initial funding</h2>
+          <form id="systemFundingForm">
+            <label>
+              User
+              <select id="userSelect" name="userId" required></select>
+            </label>
+            <label>
+              Account
+              <select id="accountSelect" name="toAccount" required></select>
+            </label>
+            <label>
+              Amount
+              <input type="number" name="amount" min="1" step="1" required />
+            </label>
+            <button class="btn btn-primary" type="submit">Add initial funds</button>
+          </form>
+          <p id="message" class="message" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Registered users</h2>
+        <ul id="userList" class="account-list"></ul>
+      </section>
+    </main>
+    <script src="/js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body class="page-dashboard" data-page="dashboard">
+    <main class="dashboard-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Ledger workspace</p>
+          <h1>Dashboard</h1>
+        </div>
+        <button class="btn btn-secondary" id="logoutBtn" type="button">Log out</button>
+      </header>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Create account</h2>
+          <p class="muted">Open a new account instantly for the signed-in user.</p>
+          <button class="btn btn-primary" id="createAccountBtn" type="button">Create new account</button>
+        </div>
+
+        <div class="card">
+          <h2>Transfer funds</h2>
+          <form id="transferForm">
+            <label>
+              From account
+              <select id="fromAccount" name="fromAccount" required></select>
+            </label>
+            <label>
+              To account (enter account ID)
+              <input id="toAccount" name="toAccount" type="text" required placeholder="Enter destination account ID" />
+            </label>
+            <label>
+              Amount
+              <input type="number" name="amount" min="1" step="1" required />
+            </label>
+            <button class="btn btn-primary" type="submit">Send transfer</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Check balance</h2>
+          <form id="balanceForm">
+            <label>
+              Account ID
+              <input id="balanceAccountId" name="accountId" type="text" required placeholder="Enter your account ID" />
+            </label>
+            <button class="btn btn-primary" type="submit">Check balance</button>
+          </form>
+          <p id="balanceMessage" class="message" aria-live="polite"></p>
+          <p id="balanceResult" class="message" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Your accounts</h2>
+        <ul id="accountList" class="account-list"></ul>
+        <p id="message" class="message" aria-live="polite"></p>
+      </section>
+    </main>
+    <script src="/js/app.js"></script>
+  </body>
+</html>

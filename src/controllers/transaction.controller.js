@@ -186,13 +186,15 @@ async function createInitialFundsTransaction(req, res) {
         })
     }
 
-    const fromUserAccount = await accountModel.findOne({
+    let fromUserAccount = await accountModel.findOne({
         user: req.user._id
     })
 
     if (!fromUserAccount) {
-        return res.status(400).json({
-            message: "System user account not found"
+        fromUserAccount = await accountModel.create({
+            user: req.user._id,
+            status: "ACTIVE",
+            currency: "INR"
         })
     }
 

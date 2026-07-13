@@ -1,0 +1,92 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f4f7fb;
+  color: #132238;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f4f7fb 0%, #dce8ff 100%);
+}
+
+main { padding: 2rem; }
+.hero, .auth-shell, .dashboard-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.hero { display: grid; place-items: center; min-height: 100vh; }
+.auth-shell { display: grid; place-items: center; min-height: 100vh; }
+.dashboard-shell { padding-top: 2rem; }
+.card {
+  background: rgba(255,255,255,0.95);
+  border: 1px solid #dfe9f6;
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 45px rgba(37, 72, 128, 0.12);
+}
+.hero-card { text-align: center; max-width: 650px; }
+.form-card { width: min(100%, 420px); }
+.grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin: 1.5rem 0; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.eyebrow { text-transform: uppercase; letter-spacing: 0.2em; color: #3d67b1; font-weight: 700; font-size: 0.75rem; margin-bottom: 0.4rem; }
+h1, h2 { margin-top: 0; }
+.muted { color: #5e728d; }
+.actions { display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem; flex-wrap: wrap; }
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.75rem 1.1rem;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-primary { background: #2758d8; color: white; }
+.btn-secondary { background: #e6eefc; color: #2758d8; }
+form { display: grid; gap: 0.9rem; }
+label { display: grid; gap: 0.4rem; font-weight: 600; }
+input, select {
+  border: 1px solid #bfd0eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  font: inherit;
+}
+
+/* Ensure form controls are responsive and don't overflow their containers */
+input, select, textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0; /* prevents overflow in flex/grid children */
+}
+
+/* Truncate long select labels visually instead of overflowing */
+select {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Loading state for buttons */
+.btn[disabled], .btn.loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+/* Make transfer form layout more responsive on narrow screens */
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .card form { gap: 0.6rem; }
+}
+.switch-link { margin-top: 1rem; text-align: center; }
+.field-error { min-height: 1rem; margin: 0; color: #bb2f3e; font-size: 0.9rem; font-weight: 600; }
+input.invalid { border-color: #bb2f3e; box-shadow: 0 0 0 2px rgba(187, 47, 62, 0.12); }
+.message { min-height: 1.4rem; margin-top: 0.75rem; font-weight: 600; }
+.message.success { color: #18794e; }
+.message.error { color: #bb2f3e; }
+.account-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.8rem; }
+.account-list li { border: 1px solid #e1ebf7; border-radius: 10px; padding: 0.85rem 1rem; background: #f8fbff; }

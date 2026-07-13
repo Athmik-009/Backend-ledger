@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken")
 const emailService = require("../services/email.service")
 const tokenBlackListModel = require("../models/blackList.model")
 
+const JWT_SECRET = process.env.JWT_SECRET || "ledger-dev-secret"
+
 /**
 * - user register controller
 * - POST /api/auth/register
@@ -25,9 +27,13 @@ async function userRegisterController(req, res) {
         email, password, name
     })
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "3d" })
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "3d" })
 
-    res.cookie("token", token)
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    })
 
     res.status(201).json({
         user: {
@@ -38,7 +44,12 @@ async function userRegisterController(req, res) {
         token
     })
 
-    await emailService.sendRegistrationEmail(user.email, user.name)
+    // Send registration email only when explicitly enabled
+    if (process.env.SEND_EMAILS === "true") {
+        await emailService.sendRegistrationEmail(user.email, user.name)
+    } else {
+        console.log("SEND_EMAILS not enabled — skipping registration email for:", user.email)
+    }
 }
 
 /**
@@ -65,9 +76,13 @@ async function userLoginController(req, res) {
         })
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "3d" })
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "3d" })
 
-    res.cookie("token", token)
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    })
 
     res.status(200).json({
         user: {
@@ -80,6 +95,49 @@ async function userLoginController(req, res) {
 
 }
 
+async function systemUserLoginController(req, res) {
+    const { email, password } = req.body
+
+    const user = await userModel.findOne({ email }).select("+password +systemUser")
+
+    if (!user) {
+        return res.status(401).json({
+            message: "Email or password is INVALID"
+        })
+    }
+
+    if (!user.systemUser) {
+        return res.status(403).json({
+            message: "Access denied. This account is not a system user."
+        })
+    }
+
+    const isValidPassword = await user.comparePassword(password)
+
+    if (!isValidPassword) {
+        return res.status(401).json({
+            message: "Email or password is INVALID"
+        })
+    }
+
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: "3d" })
+
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    })
+
+    res.status(200).json({
+        user: {
+            _id: user._id,
+            email: user.email,
+            name: user.name,
+            systemUser: true
+        },
+        token
+    })
+}
 
 /**
  * - User Logout Controller
@@ -100,7 +158,11 @@ async function userLogoutController(req, res) {
         token: token
     })
 
-    res.clearCookie("token")
+    res.clearCookie("token", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    })
 
     res.status(200).json({
         message: "User logged out successfully"
@@ -112,5 +174,6 @@ async function userLogoutController(req, res) {
 module.exports = {
     userRegisterController,
     userLoginController,
+    systemUserLoginController,
     userLogoutController
 }
