@@ -345,8 +345,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const options = accounts.map((account) => `<option value="${account._id}">${account._id} (${account.status || "ACTIVE"})</option>`).join("");
         fromAccount.innerHTML = options;
+        const balanceAccountSelect = document.getElementById("balanceAccountId");
+        balanceAccountSelect.innerHTML = options;
       } catch (error) {
-        showMessage(error.message, "error");
+        showMessage("Unable to load accounts. Please try again.", "error");
         accountList.innerHTML = "";
       }
     };
@@ -360,13 +362,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(result.message || "Unable to create account");
+          throw new Error("Unable to create account");
         }
 
         showMessage("Account created successfully.");
         await populateAccounts();
       } catch (error) {
-        showMessage(error.message, "error");
+        showMessage("Unable to create account. Please try again.", "error");
       }
     });
 
@@ -403,14 +405,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(result.message || "Unable to process transfer");
+          throw new Error("Unable to process transfer");
         }
 
         showMessage("Transfer completed successfully.");
         await populateAccounts();
         transferForm.reset();
       } catch (error) {
-        showMessage(error.message, "error");
+        showMessage("Unable to process transfer. Please try again.", "error");
       } finally {
         submitBtn?.removeAttribute('disabled');
         submitBtn?.classList.remove('loading');
@@ -423,7 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const accountId = new FormData(balanceForm).get("accountId")?.toString().trim();
 
       if (!accountId) {
-        showBalanceMessage("Please enter an account ID.", "error");
+        showBalanceMessage("Please select an account.", "error");
         showBalanceResult("");
         return;
       }
@@ -435,13 +437,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(result.message || "Unable to load balance");
+          throw new Error("Unable to load balance");
         }
 
         showBalanceMessage("Balance loaded successfully.");
         showBalanceResult(`Account ${result.accountId}: ${result.balance}`);
       } catch (error) {
-        showBalanceMessage(error.message, "error");
+        showBalanceMessage("Unable to check balance. Please try again.", "error");
         showBalanceResult("");
       }
     });
