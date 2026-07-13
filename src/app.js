@@ -56,4 +56,14 @@ app.use("/api/accounts", accountRouter)
 app.use("/api/transactions", transactionRoutes)
 app.use("/api/system", systemRouter)
 
+app.use((err, req, res, next) => {
+    console.error(err)
+    if (res.headersSent) {
+        return next(err)
+    }
+    res.status(err.status || 500).json({
+        message: err.message || "Internal server error"
+    })
+})
+
 module.exports = app

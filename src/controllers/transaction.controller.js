@@ -32,20 +32,6 @@ async function createTransaction(req, res) {
         })
     }
 
-    const fromUserAccount = await accountModel.findOne({
-        _id: fromAccount,
-    })
-
-    const toUserAccount = await accountModel.findOne({
-        _id: toAccount,
-    })
-
-    if (!fromUserAccount || !toUserAccount) {
-        return res.status(400).json({
-            message: "Invalid fromAccount or toAccount"
-        })
-    }
-
     /**
      * 2. Validate idempotency key
      */
@@ -92,27 +78,66 @@ async function createTransaction(req, res) {
         })
     }
 
-    /**
-     * 4. Derive sender balance from ledger
-     */
-    const balance = await fromUserAccount.getBalance()
-
-    if (balance < amount) {
-        return res.status(400).json({
-            message: `Insufficient balance. Current balance is ${balance}. Requested amount is ${amount}`
-        })
-    }
-
     let transaction;
+    let session;
     try {
+        /**
+         * 5. Start MongoDB transaction and lock account records.
+         */
+        session = await mongoose.startSession()
+        session.startTransaction()
 
+        const fromAccountInSession = await accountModel.findOne({
+            _id: fromAccount,
+            user: req.user._id
+        }).session(session)
+
+        const toAccountInSession = await accountModel.findOne({
+            _id: toAccount
+        }).session(session)
+
+        if (!fromAccountInSession) {
+            await session.abortTransaction()
+            return res.status(403).json({
+                message: "Unauthorized fromAccount or invalid account"
+            })
+        }
+
+        if (!toAccountInSession) {
+            await session.abortTransaction()
+            return res.status(400).json({
+                message: "Invalid toAccount"
+            })
+        }
+
+        if (fromAccountInSession.status !== "ACTIVE" || toAccountInSession.status !== "ACTIVE") {
+            await session.abortTransaction()
+            return res.status(400).json({
+                message: "Both fromAccount and toAccount must be ACTIVE to process transaction"
+            })
+        }
+
+        /**
+         * 4. Derive sender balance from ledger inside the session.
+         */
+        const balance = await fromAccountInSession.getBalance({ session })
+
+        if (balance < amount) {
+            await session.abortTransaction()
+            return res.status(400).json({
+                message: `Insufficient balance. Current balance is ${balance}. Requested amount is ${amount}`
+            })
+        }
+
+        await accountModel.findByIdAndUpdate(
+            fromAccount,
+            { $set: { updatedAt: new Date() } },
+            { session }
+        )
 
         /**
          * 5. Create transaction (PENDING)
          */
-        const session = await mongoose.startSession()
-        session.startTransaction()
-
         transaction = (await transactionModel.create([ {
             fromAccount,
             toAccount,
@@ -121,18 +146,14 @@ async function createTransaction(req, res) {
             status: "PENDING"
         } ], { session }))[ 0 ]
 
-        const debitLedgerEntry = await ledgerModel.create([ {
+        await ledgerModel.create([ {
             account: fromAccount,
             amount: amount,
             transaction: transaction._id,
             type: "DEBIT"
         } ], { session })
 
-        await (() => {
-            return new Promise((resolve) => setTimeout(resolve, 15 * 1000));
-        })()
-
-        const creditLedgerEntry = await ledgerModel.create([ {
+        await ledgerModel.create([ {
             account: toAccount,
             amount: amount,
             transaction: transaction._id,
@@ -145,15 +166,32 @@ async function createTransaction(req, res) {
             { session }
         )
 
-
         await session.commitTransaction()
-        session.endSession()
     } catch (error) {
+        if (session) {
+            try {
+                await session.abortTransaction()
+            } catch (abortError) {
+                console.error("Error aborting transaction:", abortError)
+            }
+        }
 
-        return res.status(400).json({
-            message: "Transaction is Pending due to some issue, please retry after sometime",
+        console.error("Transaction failed:", error)
+        if (process.env.SEND_EMAILS === "true") {
+            try {
+                await emailService.sendTransactionFailureEmail(req.user.email, req.user.name, amount, toAccount)
+            } catch (emailError) {
+                console.error("Failed to send transaction failure email:", emailError)
+            }
+        }
+
+        return res.status(500).json({
+            message: "Transaction failed, please retry after sometime",
         })
-
+    } finally {
+        if (session) {
+            session.endSession()
+        }
     }
     /**
      * 10. Send email notification
@@ -199,36 +237,57 @@ async function createInitialFundsTransaction(req, res) {
     }
 
 
-    const session = await mongoose.startSession()
-    session.startTransaction()
+    let session;
+    let transaction;
 
-    const transaction = new transactionModel({
-        fromAccount: fromUserAccount._id,
-        toAccount,
-        amount,
-        idempotencyKey,
-        status: "PENDING"
-    })
+    try {
+        session = await mongoose.startSession()
+        session.startTransaction()
 
-    const debitLedgerEntry = await ledgerModel.create([ {
-        account: fromUserAccount._id,
-        amount: amount,
-        transaction: transaction._id,
-        type: "DEBIT"
-    } ], { session })
+        transaction = new transactionModel({
+            fromAccount: fromUserAccount._id,
+            toAccount,
+            amount,
+            idempotencyKey,
+            status: "PENDING"
+        })
 
-    const creditLedgerEntry = await ledgerModel.create([ {
-        account: toAccount,
-        amount: amount,
-        transaction: transaction._id,
-        type: "CREDIT"
-    } ], { session })
+        await ledgerModel.create([ {
+            account: fromUserAccount._id,
+            amount: amount,
+            transaction: transaction._id,
+            type: "DEBIT"
+        } ], { session })
 
-    transaction.status = "COMPLETED"
-    await transaction.save({ session })
+        await ledgerModel.create([ {
+            account: toAccount,
+            amount: amount,
+            transaction: transaction._id,
+            type: "CREDIT"
+        } ], { session })
 
-    await session.commitTransaction()
-    session.endSession()
+        transaction.status = "COMPLETED"
+        await transaction.save({ session })
+
+        await session.commitTransaction()
+    } catch (error) {
+        if (session) {
+            try {
+                await session.abortTransaction()
+            } catch (abortError) {
+                console.error("Error aborting initial funds transaction:", abortError)
+            }
+        }
+
+        console.error("Initial funds transaction failed:", error)
+        return res.status(500).json({
+            message: "Initial funds transaction failed, please retry",
+        })
+    } finally {
+        if (session) {
+            session.endSession()
+        }
+    }
 
     return res.status(201).json({
         message: "Initial funds transaction completed successfully",

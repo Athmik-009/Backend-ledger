@@ -4,6 +4,12 @@ const emailService = require("../services/email.service")
 const tokenBlackListModel = require("../models/blackList.model")
 
 const JWT_SECRET = process.env.JWT_SECRET || "ledger-dev-secret"
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET must be set in production")
+}
+if (!process.env.JWT_SECRET) {
+    console.warn("JWT_SECRET is not set; using insecure default for development")
+}
 
 /**
 * - user register controller
